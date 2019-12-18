@@ -176,7 +176,7 @@ GMT_LOCAL int gmtsupport_parse_pattern_new (struct GMT_CTRL *GMT, char *line, st
 	unsigned int first = 1;
 	double fb_rgb[4];
 
-	fill->dpi = irint (PSL_DOTS_PER_INCH);
+	fill->dpi = irint (PSL_DOTS_PER_INCH_PATTERN);
 	if ((c = strchr (line, '+'))) {	/* Got modifiers */
 		unsigned int pos = 0, uerr = 0;
 		char p[GMT_BUFSIZ] = {""};
@@ -6941,7 +6941,11 @@ void gmt_RI_prepare (struct GMT_CTRL *GMT, struct GMT_GRID_HEADER *h) {
 	/* Adjust x_inc */
 
 	if (GMT->current.io.inc_code[GMT_X] & GMT_INC_IS_NNODES) {	/* Got n_columns */
-		h->inc[GMT_X] = gmt_M_get_inc (GMT, h->wesn[XLO], h->wesn[XHI], lrint(h->inc[GMT_X]), h->registration);
+		int64_t n = lrint (h->inc[GMT_X]);
+		if (n <= 0 || !doubleAlmostEqual (h->inc[GMT_X], (double)n)) {
+			GMT_Report (GMT->parent, GMT_MSG_NORMAL, "Your number of x-nodes %g is not a valid integer\n", h->inc[GMT_X]);
+		}
+		h->inc[GMT_X] = gmt_M_get_inc (GMT, h->wesn[XLO], h->wesn[XHI], n, h->registration);
 		GMT_Report (GMT->parent, GMT_MSG_LONG_VERBOSE, "Given n_columns implies x_inc = %g\n", h->inc[GMT_X]);
 	}
 	else if (GMT->current.io.inc_code[GMT_X] & GMT_INC_UNITS) {	/* Got funny units */
@@ -7003,7 +7007,11 @@ void gmt_RI_prepare (struct GMT_CTRL *GMT, struct GMT_GRID_HEADER *h) {
 	/* Adjust y_inc */
 
 	if (GMT->current.io.inc_code[GMT_Y] & GMT_INC_IS_NNODES) {	/* Got n_rows */
-		h->inc[GMT_Y] = gmt_M_get_inc (GMT, h->wesn[YLO], h->wesn[YHI], lrint(h->inc[GMT_Y]), h->registration);
+		int64_t n = lrint (h->inc[GMT_Y]);
+		if (n <= 0 || !doubleAlmostEqual (h->inc[GMT_Y], (double)n)) {
+			GMT_Report (GMT->parent, GMT_MSG_NORMAL, "Your number of y-nodes %g is not a valid integer\n", h->inc[GMT_Y]);
+		}
+		h->inc[GMT_Y] = gmt_M_get_inc (GMT, h->wesn[YLO], h->wesn[YHI], n, h->registration);
 		GMT_Report (GMT->parent, GMT_MSG_LONG_VERBOSE, "Given n_rows implies y_inc = %g\n", h->inc[GMT_Y]);
 	}
 	else if (GMT->current.io.inc_code[GMT_Y] & GMT_INC_UNITS) {	/* Got funny units */
@@ -7789,7 +7797,7 @@ struct GMT_PALETTE *gmt_get_palette (struct GMT_CTRL *GMT, char *file, enum GMT_
 			GMT_Report (GMT->parent, GMT_MSG_LONG_VERBOSE, "Auto-stretching CPT file %s to fit rounded data range %g to %g\n", master, zmin, zmax);
 		}
 		gmt_stretch_cpt (GMT, P, zmin, zmax);
-		gmt_save_current_cpt (GMT, P, P->cpt_flags);	/* Save for use by session, if modern */
+		gmt_save_current_cpt (GMT, P, 0);	/* Save for use by session, if modern */
 	}
 	else if (file) {	/* Gave a CPT file */
 		P = GMT_Read_Data (GMT->parent, GMT_IS_PALETTE, GMT_IS_FILE, GMT_IS_NONE, GMT_READ_NORMAL, NULL, &file[first], NULL);
@@ -13592,10 +13600,10 @@ unsigned int gmt_load_custom_annot (struct GMT_CTRL *GMT, struct GMT_PLOT_AXIS *
 		nc = sscanf (S->text[row], "%s %[^\n]", type, txt);
 		found = ((item == 'a' && (strchr (type, 'a') || strchr (type, 'i'))) || (strchr (type, item) != NULL));
 		if (!found) continue;	/* Not the type we were requesting */
-		if (S->coord[GMT_X][row] < limit[0] || S->coord[GMT_X][row] > limit[1]) continue;
+		if (S->data[GMT_X][row] < limit[0] || S->data[GMT_X][row] > limit[1]) continue;
 		if (strchr (type, 'i')) n_int++;
 		if (strchr (type, 'a')) n_annot++;
-		x[k] = S->coord[GMT_X][row];
+		x[k] = S->data[GMT_X][row];
 		if (text && nc == 2) L[k] = strdup (txt);
 		k++;
 	}

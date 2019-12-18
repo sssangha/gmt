@@ -4307,7 +4307,7 @@ void gmt_xy_axis (struct GMT_CTRL *GMT, double x0, double y0, double length, dou
 
 	if (GMT->current.proj.three_D && axis != GMT_Z) {
 		/* Because perspective is now done in PostScript we must sometimes reverse the label orientations
-		 * so they don't appear upside down when viewed from certaint quadrants */
+		 * so they don't appear upside down when viewed from certain quadrants */
 		switch (GMT->current.proj.z_project.quadrant) {
 			case 1: x_angle_add = 180.0; lx_just = PSL_TC; break;
 			case 3: y_angle_add = 180.0; ly_just = PSL_TC; break;
@@ -7066,6 +7066,10 @@ struct PSL_CTRL *gmt_plotinit (struct GMT_CTRL *GMT, struct GMT_OPTION *options)
 			else	
 				PSL_plottext (PSL, plot_x, plot_y, Tfont.size, label, 0.0, justify, form);
 			gmt_M_str_free (movie_label_arg[T]);
+			/* Because PSL_plot_completion is called at the end of the module, we must forget we used fonts here */
+			PSL->internal.font[PSL->current.font_no].encoded = 0;	/* Since truly not used yet */
+			PSL->current.font_no = -1;	/* To force setting of next font since the PSL stuff might have changed it */
+			gmt_M_memcpy (PSL->current.rgb[PSL_IS_FONT], GMT->session.no_rgb, 3, double);	/* Reset to -1,-1,-1 since text setting must set the color desired */
 		}
 		PSL_comment (PSL, "End of movie labels\n");
 		PSL_command (PSL, "U\n}!\n");
