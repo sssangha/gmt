@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------
  *
- *	Copyright (c) 1991-2019 by the GMT Team (https://www.generic-mapping-tools.org/team.html)
+ *	Copyright (c) 1991-2020 by the GMT Team (https://www.generic-mapping-tools.org/team.html)
  *	See LICENSE.TXT file for copying and redistribution conditions.
  *
  *	This program is free software; you can redistribute it and/or modify
@@ -3500,7 +3500,7 @@ GMT_LOCAL void *gmtio_ascii_input (struct GMT_CTRL *GMT, FILE *fp, uint64_t *n, 
 			}
 			else {					/* Successful decode, assign the value to the input array */
 				gmt_convert_col (GMT->current.io.col[GMT_IN][col_no], val);
-				if (gmt_M_type (GMT, GMT_IN, col_pos) & GMT_IS_LON)	/* Must account for periodicity in 360 as per current rule */
+				if (col_pos == GMT_X && gmt_M_type (GMT, GMT_IN, col_pos) & GMT_IS_LON)	/* Must account for periodicity in 360 as per current rule */
 					gmtio_adjust_periodic_lon (GMT, &val);
 				GMT->current.io.curr_rec[col_pos] = val;
 				col_no++;		/* Count up number of columns found */
@@ -4307,13 +4307,17 @@ int gmt_z_output (struct GMT_CTRL *GMT, FILE *fp, uint64_t n, double *data, char
 	return (err ? -1 : 0);	/* Return -1 if failed, else n items written */
 }
 
-/* gmt_z_input and gmt_z_output are used in grd2xyz/xyz2grd to fascilitate reading of one-col items via the general i/o machinery */
+/* gmt_z_input and gmt_z_output are used in grd2xyz/xyz2grd to fascilitate reading of one-col items via the general i/o machinery
+ * Despite taking uint64_t *n we KNOW that this value is 1 and hence column is always GMT_X. */
 /*! . */
 void * gmt_z_input (struct GMT_CTRL *GMT, FILE *fp, uint64_t *n, int *status) {
 	if ((*status = GMT->current.io.read_item (GMT, fp, *n, GMT->current.io.curr_rec)) == GMT_DATA_READ_ERROR) {
 		GMT->current.io.status = GMT_IO_EOF;
 		return (NULL);
 	}
+	if (GMT->common.i.select)	/* We need to scale this single item */
+		gmt_convert_col (GMT->current.io.col[GMT_IN][GMT_X], GMT->current.io.curr_rec[GMT_X]);
+
 	return (&GMT->current.io.record);
 }
 
@@ -4595,10 +4599,12 @@ FILE * gmt_fopen (struct GMT_CTRL *GMT, const char *filename, const char *mode) 
 #else
 					snprintf (cmd, GMT_BUFSIZ+GMT_LEN256, "ogr2ogr -f \"GMT\" %s %s", GMT->current.io.tempfile, c);
 #endif
+					GMT_Report (GMT->parent, GMT_MSG_DEBUG, "Running %s\n", cmd);
 					if ((error = system (cmd))) {
 						GMT_Report (GMT->parent, GMT_MSG_NORMAL, "System call [%s] FAILED with error %d.\n", cmd, error);
 						return NULL;
 					}
+					sprintf (GMT->current.io.filename[GMT_IN], "%s <converted from %s via ogr2ogr>", GMT->current.io.tempfile, c);
 					c = GMT->current.io.tempfile;	/* Open this temporary instead */
 				}
 #endif

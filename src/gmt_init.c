@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------
  *
- *	Copyright (c) 1991-2019 by the GMT Team (https://www.generic-mapping-tools.org/team.html)
+ *	Copyright (c) 1991-2020 by the GMT Team (https://www.generic-mapping-tools.org/team.html)
  *	See LICENSE.TXT file for copying and redistribution conditions.
  *
  *	This program is free software; you can redistribute it and/or modify
@@ -6579,10 +6579,10 @@ void gmtlib_explain_options (struct GMT_CTRL *GMT, char *options) {
 
 		case 'h':	/* Header */
 
-			gmt_message (GMT, "\t-h[i][<n>][+c][+d][+r<remark>][+t<title>] Input/output file has [%d] Header record(s) [%s]\n",
+			gmt_message (GMT, "\t-h[i|o][<n>][+c][+d][+r<remark>][+t<title>] Input/output file has [%d] Header record(s) [%s]\n",
 			             GMT->current.setting.io_n_header_items, GMT_choice[GMT->current.setting.io_header[GMT_IN]]);
-			gmt_message (GMT, "\t   Optionally, append i for input only and/or number of header records [0].\n");
-			gmt_message (GMT, "\t     -hi turns off the writing of all headers on output.\n");
+			gmt_message (GMT, "\t   Optionally, append i for input or o for output only and/or number of header records [0].\n");
+			gmt_message (GMT, "\t     -hi turns off the writing of all headers on output since none will be read.\n");
 			gmt_message (GMT, "\t   Append +c to add header record with column information [none].\n");
 			gmt_message (GMT, "\t   Append +d to delete headers before adding new ones [Default will append headers].\n");
 			gmt_message (GMT, "\t   Append +r to add a <remark> comment to the output [none].\n");
@@ -6593,14 +6593,14 @@ void gmtlib_explain_options (struct GMT_CTRL *GMT, char *options) {
 
 		case 'i':	/* -i option for input column order */
 
-			gmt_message (GMT, "\t-i Sets alternate input column order and optional transformations [Default reads all columns in original order].\n");
+			gmt_message (GMT, "\t-i Set alternate input column order and optional transformations [Default reads all columns in original order].\n");
 			gmt_message (GMT, "\t   Append list of columns; t[<word>] = trailing text; use <word> to pick a word from the text.\n");
 			gmt_message (GMT, "\t   Use -in for considering numerical input only.\n");
 			break;
 
 		case 'A':	/* -j option for spherical distance calculation mode */
 
-			gmt_message (GMT, "\t-j Sets spherical distance calculation mode for modules that offer that flexibility.\n");
+			gmt_message (GMT, "\t-j Set spherical distance calculation mode for modules that offer that flexibility.\n");
 			gmt_message (GMT, "\t   Append f for Flat Earth, g for Great Circle [Default], and e for Ellipsoidal mode.\n");
 			break;
 
@@ -7400,7 +7400,7 @@ void gmt_syntax (struct GMT_CTRL *GMT, char option) {
 		case 'i':	/* -i option for input column order */
 
 			gmt_message (GMT, "\t%s\n", GMT_i_OPT);
-			gmt_message (GMT, "\t   Sets alternate numerical input column order and/or scaling. Append ,t to include trailing text.\n");
+			gmt_message (GMT, "\t   Set alternate numerical input column order and optional translations. Append ,t to include trailing text.\n");
 			gmt_message (GMT, "\t   [Default reads all numerical columns in order, followed by any trailing text].\n");
 			break;
 
@@ -7424,7 +7424,7 @@ void gmt_syntax (struct GMT_CTRL *GMT, char option) {
 		case 'o':	/* -o option for output column order */
 
 			gmt_message (GMT, "\t%s\n", GMT_o_OPT);
-			gmt_message (GMT, "\t   Sets alternate numerical output column order and/or scaling; end with [,]t to output trailing text.\n");
+			gmt_message (GMT, "\t   Set alternate numerical output column order; end with [,]t[<word>] to output trailing text.\n");
 			gmt_message (GMT, "\t   [Default writes all numerical columns in order, followed by any trailing text].\n");
 			break;
 
@@ -8158,6 +8158,11 @@ int gmt_parse_o_option (struct GMT_CTRL *GMT, char *arg) {
 	int64_t i, start = -1, stop = -1, inc;
 
 	if (!arg || !arg[0]) return (GMT_PARSE_ERROR);	/* -o requires an argument */
+
+	if (strstr (arg, "+s") || strstr (arg, "+o") || strstr (arg, "+l")) {
+		GMT_Report (GMT->parent, GMT_MSG_NORMAL, "The -o option does not take +l|o|s modifiers; consider -i instead.\n");
+		return GMT_PARSE_ERROR;
+	}
 
 	strncpy (copy, arg, GMT_BUFSIZ-1);
 	strncpy (GMT->common.o.string, arg, GMT_LEN64-1);	/* Verbatim copy */
@@ -12038,14 +12043,15 @@ struct GMT_SUBPLOT *gmt_subplot_info (struct GMTAPI_CTRL *API, int fig) {
 			}
 			c++;	k = 0;	/* Now at start of axes */
 			while (*c != GMT_ASCII_GS) P->Baxes[k++] = *(c++);	/* Copy it over until end */
-			c++;	k = 0;	/* Now at start of xaxis */
+			P->Baxes[k] = '\0'; c++;	k = 0;	/* Now at start of xaxis */
 			while (*c != GMT_ASCII_GS) P->Bxlabel[k++] = *(c++);	/* Copy it over until end */
-			c++;	k = 0;	/* Now at start of yaxis */
+			P->Bxlabel[k] = '\0'; c++;	k = 0;	/* Now at start of yaxis */
 			while (*c != GMT_ASCII_GS) P->Bylabel[k++] = *(c++);	/* Copy it over until end */
-			c++;	k = 0;	/* Now at start of xannot */
+			P->Bylabel[k] = '\0'; c++;	k = 0;	/* Now at start of xannot */
 			while (*c != GMT_ASCII_GS) P->Bxannot[k++] = *(c++);	/* Copy it over until end */
-			c++;	k = 0;	/* Now at start of yannot */
+			P->Bxannot[k] = '\0'; c++;	k = 0;	/* Now at start of yannot */
 			while (*c != GMT_ASCII_GS) P->Byannot[k++] = *(c++);	/* Copy it over until end */
+			P->Byannot[k] = '\0';
 			found = true;	/* We are done */
 		}
 	}
@@ -15814,6 +15820,18 @@ GMT_LOCAL bool check_if_autosize (struct GMTAPI_CTRL *API, int ID) {
 	return false;
 }
 
+GMT_LOCAL bool A_was_given (char *text) {
+	/* Determine if A is one of the arguments */
+	size_t k = 1;
+	if (!text || !text[0]) return false;	/* No args means -A was not given */
+	if (text[0] == 'A') return true;	/* A was given as first option */
+	while (text[k]) {
+		if (text[k] == 'A' && text[k-1] == ',') return true;	/* Found A as first letter after comma */
+		k++;
+	}
+	return false;
+}
+
 GMT_LOCAL int process_figures (struct GMTAPI_CTRL *API, char *show) {
 	/* Loop over all registered figures and their selected formats and
 	 * convert the hidden PostScript figures to selected graphics.
@@ -15901,7 +15919,7 @@ GMT_LOCAL int process_figures (struct GMTAPI_CTRL *API, char *show) {
 						if (p[0] == 'D') strcpy (dir, &p[1]);	/* Needed in show */
 					}
 				}
-				if (not_PS && auto_size && strchr (fig[k].options, 'A') == NULL)	/* Must always add -A if not PostScript unless when media size is given, unless crop is off via +n */
+				if (not_PS && auto_size && !A_was_given (fig[k].options))	/* Must always add -A if not PostScript unless when media size is given, unless crop is off via +n */
 					strcat (cmd, " -A");
 			}
 			else if (API->GMT->current.setting.ps_convert[0]) {	/* Supply chosen session settings for psconvert */
@@ -15914,7 +15932,7 @@ GMT_LOCAL int process_figures (struct GMTAPI_CTRL *API, char *show) {
 						if (p[0] == 'D') strcpy (dir, &p[1]);	/* Needed in show */
 					}
 				}
-				if (not_PS && auto_size && strchr (API->GMT->current.setting.ps_convert, 'A') == NULL)	/* Must always add -A if not PostScript unless when media size is given */
+				if (not_PS && auto_size && !A_was_given (API->GMT->current.setting.ps_convert))	/* Must always add -A if not PostScript unless when media size is given */
 					strcat (cmd, " -A");
 			}
 			else if (not_PS && auto_size) /* No specific settings but must always add -A if not PostScript unless when media size is given */

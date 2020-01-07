@@ -15,7 +15,7 @@ Synopsis
 **gmt grd2cpt** *grid* [ |-A|\ *transparency*\ [**+a**\ ] ]
 [ |-C|\ *cpt* ] [ |-D|\ [**i**] ]
 [ |-E|\ [*nlevels*] ]
-[ |-F|\ [**R**\ \|\ **r**\ \|\ **h**\ \|\ **c**\ ][**+c**\ ]]
+[ |-F|\ [**R**\ \|\ **r**\ \|\ **h**\ \|\ **c**\ ][**+c**\ ] ]
 [ |-G|\ *zlo*\ /\ *zhi* ]
 [ |-H| ]
 [ |-I|\ [**c**][**z**] ]
@@ -119,7 +119,7 @@ Optional Arguments
 
 .. _-F:
 
-**-F**\ [**R**\ \|\ **r**\ \|\ **h**\ \|\ **c**][**+c**\ ]]
+**-F**\ [**R**\ \|\ **r**\ \|\ **h**\ \|\ **c**][**+c**\ ]
     Force output CPT to written with r/g/b codes, gray-scale values
     or color name (**R**, default) or r/g/b codes only (**r**), or h-s-v
     codes (**h**), or c/m/y/k codes (**c**).  Optionally or alternatively,
@@ -210,7 +210,7 @@ Optional Arguments
 
 .. _-W:
 
-**-W**
+**-W**\ [**w**]
     Do not interpolate the input color table but pick the output colors
     starting at the beginning of the map. This is particularly useful in
     combination with a categorical color table. Cannot be used in

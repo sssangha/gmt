@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------
  *
- *	Copyright (c) 1991-2019 by the GMT Team (https://www.generic-mapping-tools.org/team.html)
+ *	Copyright (c) 1991-2020 by the GMT Team (https://www.generic-mapping-tools.org/team.html)
  *	See LICENSE.TXT file for copying and redistribution conditions.
  *
  *	This program is free software; you can redistribute it and/or modify
@@ -535,7 +535,7 @@ int GMT_psternary (void *V_API, int mode, void *args) {
 			Return (API->error);
 		}
 		sprintf (cmd, "-R0/1/0/1 -JX%gi -O -K -S%s %s", width, Ctrl->S.string, vfile);
-		if (Ctrl->C.active) {strcat (cmd, " -C"); strcat (cmd, Ctrl->C.string);}
+		if (Ctrl->C.active) {strcat (cmd, " -C"); if (Ctrl->C.string) strcat (cmd, Ctrl->C.string);}
 		else if (Ctrl->G.active) {strcat (cmd, " -G"); strcat (cmd, Ctrl->G.string);}
 		if (Ctrl->W.active) {strcat (cmd, " -W"); strcat (cmd, Ctrl->W.string);}
 		if ((error = GMT_Call_Module (API, "psxy", GMT_MODULE_CMD, cmd))) {

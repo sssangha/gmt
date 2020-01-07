@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 #
-#   Copyright (c) 1991-2019 by the GMT Team (https://www.generic-mapping-tools.org/team.html)
+#   Copyright (c) 1991-2020 by the GMT Team (https://www.generic-mapping-tools.org/team.html)
 #   See LICENSE.TXT file for copying and redistribution conditions.
 #
 #   This program is free software; you can redistribute it and/or modify
@@ -75,7 +75,7 @@ home=`pwd`
 if [ ! -f "$home/.gmtversions" ]; then	# No .gmtversions exists yet, first do that part
   cat << EOF >&2
 
-GMTSWITCH $Revision$
+GMTSWITCH
 
 gmtswitch helps you modify your environment to allow for the switching back and
 forth between several GMT versions, in particular GMT 5 and previous GMT

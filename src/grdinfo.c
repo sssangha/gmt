@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------
  *
- *	Copyright (c) 1991-2019 by the GMT Team (https://www.generic-mapping-tools.org/team.html)
+ *	Copyright (c) 1991-2020 by the GMT Team (https://www.generic-mapping-tools.org/team.html)
  *	See LICENSE.TXT file for copying and redistribution conditions.
  *
  *	This program is free software; you can redistribute it and/or modify
@@ -103,7 +103,7 @@ GMT_LOCAL void Free_Ctrl (struct GMT_CTRL *GMT, struct GRDINFO_CTRL *C) {	/* Dea
 GMT_LOCAL int usage (struct GMTAPI_CTRL *API, int level) {
 	const char *name = gmt_show_name_and_purpose (API, THIS_MODULE_LIB, THIS_MODULE_CLASSIC_NAME, THIS_MODULE_PURPOSE);
 	if (level == GMT_MODULE_PURPOSE) return (GMT_NOERROR);
-	GMT_Message (API, GMT_TIME_NONE, "usage: %s <grid> [-C[n|t]] [-D[<offx>[/<offy>][+i]] [-F] [-I[<dx>[/<dy>]|b|i|r]] [-L[a|0|1|2|p]] [-M]\n", name);
+	GMT_Message (API, GMT_TIME_NONE, "usage: %s <grid> [-C[n|t]] [-D[<offx>[/<offy>]][+i]] [-F] [-I[<dx>[/<dy>]|b|i|r]] [-L[a|0|1|2|p]] [-M]\n", name);
 	GMT_Message (API, GMT_TIME_NONE, "	[%s] [-T[<dz>][+a[<alpha>]][+s]] [%s] [%s]\n\t[%s] [%s] [%s]\n\n", GMT_Rgeo_OPT, GMT_V_OPT, GMT_f_OPT, GMT_ho_OPT, GMT_o_OPT, GMT_PAR_OPT);
 
 	if (level == GMT_SYNOPSIS) return (GMT_MODULE_SYNOPSIS);
@@ -118,6 +118,7 @@ GMT_LOCAL int usage (struct GMTAPI_CTRL *API, int level) {
 	GMT_Message (API, GMT_TIME_NONE, "\t-D Report tiles using tile size set in -I. Optionally, extend each tile region by <offx>/<offy>.\n");
 	GMT_Message (API, GMT_TIME_NONE, "\t   Append +i to only report tiles if the subregion has data (limited to one input grid).\n");
 	GMT_Message (API, GMT_TIME_NONE, "\t   If no grid is given then -R must be given and we tile based on the given region.\n");
+	GMT_Message (API, GMT_TIME_NONE, "\t   Use -Ct to append the region string as trailing text to the numerical columns.\n");
 	GMT_Message (API, GMT_TIME_NONE, "\t-F Report domain in world mapping format [Default is generic].\n");
 	GMT_Message (API, GMT_TIME_NONE, "\t-I Return textstring -Rw/e/s/n to nearest multiple of dx/dy.\n");
 	GMT_Message (API, GMT_TIME_NONE, "\t   If -C is set then rounding off will occur but no -R string is issued.\n");
@@ -264,7 +265,7 @@ GMT_LOCAL int parse (struct GMT_CTRL *GMT, struct GRDINFO_CTRL *Ctrl, struct GMT
 		}
 	}
 
-	num_report = (Ctrl->C.active && Ctrl->C.mode != GRDINFO_TRADITIONAL);
+	num_report = (Ctrl->C.active && (Ctrl->D.active || Ctrl->C.mode != GRDINFO_TRADITIONAL));
 	no_file_OK = (Ctrl->D.active && Ctrl->D.mode == 0 && GMT->common.R.active[RSET]);
 	n_errors += gmt_M_check_condition (GMT, n_files == 0 && !no_file_OK,
 	                                   "Syntax error: Must specify one or more input files\n");
@@ -285,6 +286,8 @@ GMT_LOCAL int parse (struct GMT_CTRL *GMT, struct GRDINFO_CTRL *Ctrl, struct GMT
 	                                   "Syntax error -L: Not compatible with -I or -T\n");
 	n_errors += gmt_M_check_condition (GMT, Ctrl->T.active && Ctrl->I.active,
 	                                   "Syntax error: Only one of -I -T can be specified\n");
+	n_errors += gmt_M_check_condition (GMT, Ctrl->C.active && Ctrl->F.active,
+	                                   "Syntax error: Only one of -C, -F can be specified\n");
 	n_errors += gmt_M_check_condition (GMT, GMT->common.o.active && !num_report,
 	                                   "Syntax error: The -o option requires -Cn\n");
 
@@ -304,8 +307,8 @@ GMT_LOCAL void report_tiles (struct GMT_CTRL *GMT, struct GMT_GRID *G, double w,
 	char text[GMT_LEN64] = {""}, record[GMT_BUFSIZ] = {""};
 	struct GMT_RECORD *Out = NULL;
 	
-	num_report = (Ctrl->C.active && Ctrl->C.mode != GRDINFO_TRADITIONAL);
-	Out = gmt_new_record (GMT, num_report ? NULL : out, num_report ? record : NULL);
+	num_report = (Ctrl->C.active);
+	Out = gmt_new_record (GMT, num_report ? out : NULL, (num_report && Ctrl->C.mode != GRDINFO_TRAILING) ? NULL : record);
 	
 	nx = gmt_M_get_n (GMT, w, e, Ctrl->I.inc[GMT_X], 1);
 	ny = gmt_M_get_n (GMT, s, n, Ctrl->I.inc[GMT_Y], 1);
@@ -351,7 +354,7 @@ L_use_it:			row = 0;	/* Get here by goto and use is still true */
 						out[XHI] = (out[XHI] < 0.0) ? +180.0 : 360.0;
 					}
 				}
-				if (num_report)	/* Report numerical only */
+				if (num_report && Ctrl->C.mode != GRDINFO_TRAILING)	/* Report numerical only */
 					GMT_Put_Record (GMT->parent, GMT_WRITE_DATA, Out);
 				else {
 					sprintf (record, "-R");
@@ -493,7 +496,7 @@ int GMT_grdinfo (void *V_API, int mode, void *args) {
 		global_xmax = global_ymax = global_zmax = -DBL_MAX;
 	}
 	delay = (Ctrl->D.mode == 1 || (Ctrl->T.mode & 2));	/* Delay the freeing of the (single) grid we read */
-	num_report = (Ctrl->C.active && Ctrl->C.mode != GRDINFO_TRADITIONAL);
+	num_report = (Ctrl->C.active && (Ctrl->D.active || Ctrl->C.mode != GRDINFO_TRADITIONAL));
 	
 	if (Ctrl->C.active) {
 		n_cols = 6;	/* w e s n z0 z1 */
@@ -508,6 +511,10 @@ int GMT_grdinfo (void *V_API, int mode, void *args) {
 		geometry = GMT_IS_NONE;
 		if (Ctrl->C.mode == GRDINFO_TRADITIONAL) geometry = GMT_IS_TEXT;
 		if (geometry == GMT_IS_TEXT) n_cols = 0;	/* A single string, unfortunately */
+		if (Ctrl->D.active) {
+			n_cols = 4;	/* Just reporting w e s n per tile */
+			if (Ctrl->C.mode != GRDINFO_TRAILING) cmode = GMT_COL_FIX_NO_TEXT;
+		}
 	}
 	else if (Ctrl->I.status == GRDINFO_GIVE_BOUNDBOX) {
 		n_cols = 2;
@@ -833,9 +840,11 @@ int GMT_grdinfo (void *V_API, int mode, void *args) {
 				gmt_ascii_format_col (GMT, text, G->header->wesn[XHI], GMT_OUT, GMT_X);	strcat (record, text);
 				strcat (record, " x_inc: ");	smart_increments (GMT, G->header->inc, GMT_X, text);	strcat (record, text);
 				strcat (record, " name: ");
-				if ((c = strstr (G->header->x_units, " [degrees"))) {
+				if ((c = strstr (G->header->x_units, " [degrees"))) {	/* Strip off [degrees ...] from the name of the longitude variable */
 					c[0] = '\0'; strcat (record, G->header->x_units); if (c) c[0] = ' ';
 				}
+				else	/* Just output what it says */
+					strcat (record, G->header->x_units);
 				sprintf (text, " n_columns: %d", G->header->n_columns);	strcat (record, text);
 				GMT_Put_Record (API, GMT_WRITE_DATA, Out);
 				sprintf (record, "%s: y_min: ", HH->name);
@@ -844,9 +853,11 @@ int GMT_grdinfo (void *V_API, int mode, void *args) {
 				gmt_ascii_format_col (GMT, text, G->header->wesn[YHI], GMT_OUT, GMT_Y);	strcat (record, text);
 				strcat (record, " y_inc: ");	smart_increments (GMT, G->header->inc, GMT_Y, text);	strcat (record, text);
 				strcat (record, " name: ");
-				if ((c = strstr (G->header->y_units, " [degrees"))) {
+				if ((c = strstr (G->header->y_units, " [degrees"))) {	/* Strip off [degrees ...] from the name of the latitude variable */
 					c[0] = '\0'; strcat (record, G->header->y_units); if (c) c[0] = ' ';
 				}
+				else	/* Just output what it says */
+					strcat (record, G->header->y_units);
 				sprintf (text, " n_rows: %d", G->header->n_rows);	strcat (record, text);
 				GMT_Put_Record (API, GMT_WRITE_DATA, Out);
 			}
@@ -949,10 +960,12 @@ int GMT_grdinfo (void *V_API, int mode, void *args) {
 	if (global_zmax == -DBL_MAX) global_zmax = GMT->session.d_NaN;
 
 	if (Ctrl->C.active && (Ctrl->I.active && Ctrl->I.status == GRDINFO_GIVE_REG_ROUNDED)) {
-		global_xmin = floor (global_xmin / Ctrl->I.inc[GMT_X]) * Ctrl->I.inc[GMT_X];
-		global_xmax = ceil  (global_xmax / Ctrl->I.inc[GMT_X]) * Ctrl->I.inc[GMT_X];
-		global_ymin = floor (global_ymin / Ctrl->I.inc[GMT_Y]) * Ctrl->I.inc[GMT_Y];
-		global_ymax = ceil  (global_ymax / Ctrl->I.inc[GMT_Y]) * Ctrl->I.inc[GMT_Y];
+		if (!Ctrl->D.active) {	/* Don't want to round if getting tile regions */
+			global_xmin = floor (global_xmin / Ctrl->I.inc[GMT_X]) * Ctrl->I.inc[GMT_X];
+			global_xmax = ceil  (global_xmax / Ctrl->I.inc[GMT_X]) * Ctrl->I.inc[GMT_X];
+			global_ymin = floor (global_ymin / Ctrl->I.inc[GMT_Y]) * Ctrl->I.inc[GMT_Y];
+			global_ymax = ceil  (global_ymax / Ctrl->I.inc[GMT_Y]) * Ctrl->I.inc[GMT_Y];
+		}
 		if (!Ctrl->D.active && gmt_M_is_geographic (GMT, GMT_IN)) {	/* Must make sure we don't get outside valid bounds */
 			if (global_ymin < -90.0) {
 				global_ymin = -90.0;
@@ -1032,10 +1045,12 @@ int GMT_grdinfo (void *V_API, int mode, void *args) {
 		GMT_Put_Record (API, GMT_WRITE_DATA, Out);
 	}
 	else if ((Ctrl->I.active && Ctrl->I.status == GRDINFO_GIVE_REG_ROUNDED)) {
-		global_xmin = floor (global_xmin / Ctrl->I.inc[GMT_X]) * Ctrl->I.inc[GMT_X];
-		global_xmax = ceil  (global_xmax / Ctrl->I.inc[GMT_X]) * Ctrl->I.inc[GMT_X];
-		global_ymin = floor (global_ymin / Ctrl->I.inc[GMT_Y]) * Ctrl->I.inc[GMT_Y];
-		global_ymax = ceil  (global_ymax / Ctrl->I.inc[GMT_Y]) * Ctrl->I.inc[GMT_Y];
+		if (!Ctrl->D.active) {	/* Don't want to round if getting tile regions */
+			global_xmin = floor (global_xmin / Ctrl->I.inc[GMT_X]) * Ctrl->I.inc[GMT_X];
+			global_xmax = ceil  (global_xmax / Ctrl->I.inc[GMT_X]) * Ctrl->I.inc[GMT_X];
+			global_ymin = floor (global_ymin / Ctrl->I.inc[GMT_Y]) * Ctrl->I.inc[GMT_Y];
+			global_ymax = ceil  (global_ymax / Ctrl->I.inc[GMT_Y]) * Ctrl->I.inc[GMT_Y];
+		}
 		if (!Ctrl->D.active && gmt_M_is_geographic (GMT, GMT_IN)) {	/* Must make sure we don't get outside valid bounds */
 			if (global_ymin < -90.0) {
 				global_ymin = -90.0;
