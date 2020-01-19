@@ -319,7 +319,7 @@ set (GMT_PROGS_SRCS blockmean.c blockmedian.c blockmode.c docs.c dimfilter.c fil
 	fitcircle.c gmt2kml.c gmtconvert.c gmtlogo.c gmtmath.c gmtselect.c gmtsimplify.c
 	gmtspatial.c gmtconnect.c gmtregress.c gmtvector.c gmtwhich.c grd2cpt.c
 	grd2xyz.c grdblend.c grdclip.c grdcut.c grdedit.c grdfft.c grdfill.c grdfilter.c
-	grdgradient.c grdhisteq.c grdinfo.c grdlandmask.c grdmask.c grdmath.c
+	grdgradient.c grdhisteq.c grdinfo.c grdinterpolate.c grdlandmask.c grdmask.c grdmath.c
 	grdpaste.c grdproject.c grdsample.c grdconvert.c grdtrack.c movie.c
 	grdtrend.c grdvolume.c greenspline.c kml2gmt.c makecpt.c mapproject.c
 	gmtinfo.c nearneighbor.c project.c psconvert.c sample1d.c spectrum1d.c
@@ -396,7 +396,8 @@ add_custom_command (OUTPUT gmt_dimensions.h
 	-D CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}
 	-D GMT_SRC=${GMT_SOURCE_DIR}
 	-P ${CMAKE_MODULE_PATH}/GmtGenExtraHeaders.cmake
-	DEPENDS gmt_media_name.h gmt_pennames.h gmt_unique.h gmt_cpt_masters.h
+	DEPENDS gmt_media_name.h gmt_pennames.h gmt_unique.h gmt_ellipsoids.h
+	gmt_datums.h gmt_colornames.h gmt_cpt_masters.h gmt_datasets.h
 	gmt_keycases.h)
 	# depends on cached line numbers from these generated files:
 

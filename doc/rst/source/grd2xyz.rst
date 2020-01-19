@@ -21,6 +21,7 @@ Synopsis
 [ |SYN_OPT-f| ]
 [ **-ho**\ [*n*] ]
 [ |SYN_OPT-o| ]
+[ |SYN_OPT-qo| ]
 [ |SYN_OPT-s| ]
 [ |SYN_OPT--| ]
 
@@ -106,7 +107,6 @@ Optional Arguments
     * **d** 8-byte floating point double precision
 
     Default format is scanline orientation of ASCII numbers: **-ZTLa**.
-    Note that **-Z** only applies to 1-column output. 
 
 .. |Add_-bo| replace:: [Default is 3]. This option
     only applies to xyz output; see **-Z** for z table output. 
@@ -122,6 +122,8 @@ Optional Arguments
 ..  include:: explain_-f.rst_
 
 .. include:: explain_-ocols.rst_
+
+.. include:: explain_-qo.rst_
 
 .. include:: explain_-s.rst_
 

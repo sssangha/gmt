@@ -385,7 +385,7 @@ Three classes of files are given special treatment in GMT.
    into a seamless grid using :doc:`/grdblend`. A tile is only downloaded and converted
    once (unless the user cleans the data directories).
 #. If a file is given as a full URL, starting with **http://**, **https://**,
-   or **ftp://**, then the file will be downloaded to **DIR_CACHE** and subsequently
+   or **ftp://**, then the file will be downloaded to the current directory and subsequently
    read from there (until removed by the user).  If the URL is actually a CGI Get
    command (i.e., ends in ?par=val1&par2=val2...) then we download the file
    each time we encounter the URL.
@@ -2047,6 +2047,12 @@ Everything looks clearer after a few examples:
 
 *  To read a short integer *.bil* grid file stored in binary and and force
    the reading via GDAL, add suffix *=gd* as in ``n45_e008_1arc_v3.bil=gd``
+
+*  To write a lossless, deflate compressed, and tiled GeoTIFF grid (or image) use,
+   ``output.tif=gd:GTiff+cTILED=YES+cCOMPRESS=DEFLATE+cPREDICTOR=3``
+   See also :ref:`Writing grids and images <Write-grids-images>` as well as available options
+   for each output format from the GDAL driver documentation,
+   `for example <https://gdal.org/drivers/raster/gtiff.html>`_
 
 Programs that both read and/or write more than one grid file may specify
 different formats and/or scaling for the files involved. The only

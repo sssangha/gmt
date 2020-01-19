@@ -519,20 +519,7 @@ struct GMT_DATASET * gmt_DCW_operation (struct GMT_CTRL *GMT, struct GMT_DCW_SEL
 		gmt_find_range (GMT, Z, n_items, &wesn[XLO], &wesn[XHI]);
 		gmt_M_free (GMT, Z);
 		GMT->current.io.geo.range = GMT_IGNORE_RANGE;		/* Override this setting explicitly */
-		if (F->adjust) {
-			if (F->extend) {	/* Extend the region by increments */
-				wesn[XLO] -= F->inc[XLO];
-				wesn[YLO] -= F->inc[YLO];
-				wesn[XHI] += F->inc[XHI];
-				wesn[YHI] += F->inc[YHI];
-			}
-			else {	/* Make region be in multiples of increments */
-				wesn[XLO] = floor (wesn[XLO] / F->inc[XLO]) * F->inc[XLO];
-				wesn[YLO] = floor (wesn[YLO] / F->inc[YLO]) * F->inc[YLO];
-				wesn[XHI] = ceil  (wesn[XHI] / F->inc[XHI]) * F->inc[XHI];
-				wesn[YHI] = ceil  (wesn[YHI] / F->inc[YHI]) * F->inc[YHI];
-			}
-		}
+		gmt_extend_region (GMT, wesn, F->adjust, F->inc);
 		if (is_Antarctica) {	/* Must override to include pole and full longitude range */
 			wesn[YLO] = -90.0;	/* Since it is a South polar cap */
 			wesn[XLO] = 0.0;
@@ -601,7 +588,7 @@ void gmt_DCW_option (struct GMTAPI_CTRL *API, char option, unsigned int plot) {
 	GMT_Message (API, GMT_TIME_NONE, "\t   To select a state of a country (if available), append .state, e.g, US.TX for Texas.\n");
 	GMT_Message (API, GMT_TIME_NONE, "\t   To select a whole continent, use =AF|AN|AS|EU|OC|NA|SA as <code>.\n");
 	GMT_Message (API, GMT_TIME_NONE, "\t   Append +l to just list the countries and their codes [no %s takes place].\n", action2[plot]);
-	GMT_Message (API, GMT_TIME_NONE, "\t   Use +L to see states/territories for Australia, Brazil, Canada, and the US.\n");
+	GMT_Message (API, GMT_TIME_NONE, "\t   Use +L to see states/territories for Argentina, Australia, Brazil, Canada, China, India, Russia and the US.\n");
 	if (plot == 1) {
 		GMT_Message (API, GMT_TIME_NONE, "\t   Append +p<pen> to draw outline [none] and +g<fill> to fill [none].\n");
 		GMT_Message (API, GMT_TIME_NONE, "\t   One of +p|g must be specified to plot; if -M is in effect we just get the data.\n");
@@ -611,7 +598,7 @@ void gmt_DCW_option (struct GMTAPI_CTRL *API, char option, unsigned int plot) {
 
 unsigned int gmt_DCW_parse (struct GMT_CTRL *GMT, char option, char *args, struct GMT_DCW_SELECT *F) {
 	/* Parse the F option in pscoast */
-	unsigned int n_errors = 0, pos = 0, n;
+	unsigned int n_errors = 0, pos = 0;
 	char p[GMT_BUFSIZ] = {""}, *c = NULL, *a = NULL, *q = NULL;
 	struct GMT_DCW_ITEM *this_item = NULL;
 
@@ -622,7 +609,7 @@ unsigned int gmt_DCW_parse (struct GMT_CTRL *GMT, char option, char *args, struc
 
 	/* If +g is used with patterns and +r<dpi> is appended then there is conflict with +r for the deprecated region modification.
 	 * We avoid this by checking for this case and replacing +r with @r to avoid the strtok splitting off that modifier. */
-	
+
 	if (a && (c = strchr (a, '+'))) {	/* Handle modifiers */
 		if ((q = strstr (c, "+g")) && strchr ("Pp", q[2]) && strstr (&q[3], "+r")) {	/* There is a +r<dpi> that follows a +g pattern modifier */
 			char *t = &q[3];	/* First character of pattern name or number */
@@ -642,25 +629,9 @@ unsigned int gmt_DCW_parse (struct GMT_CTRL *GMT, char option, char *args, struc
 		while ((gmt_strtok (c, "+", &pos, p))) {
 			switch (p[0]) {
 				/* Listings*/
-				case 'R':	/* Get region from polygon(s) BB */
-					F->extend = true;
-					/* Intentional lack of break to fall through to next case */
-				case 'r':	/* Get region from polygon(s) BB */
+				case 'R':	case 'e': case 'r': /* Get region from polygon(s) BB */
 					F->region = true;
-					if (p[1]) {	/* Supplied increments to add or quantize region with */
-						F->adjust = true;
-						n = GMT_Get_Values (GMT->parent, &p[1], F->inc, 4);
-						if (n == 1)	/* Same round in all directions */
-							F->inc[XHI] = F->inc[YLO] = F->inc[YHI] = F->inc[XLO];
-						else if (n == 2) {	/* Separate round in x and y */
-							F->inc[YLO] = F->inc[YHI] = F->inc[XHI];
-							F->inc[XHI] = F->inc[XLO];
-						}
-						else if (n != 4) {
-							GMT_Report (GMT->parent, GMT_MSG_NORMAL, "Error -%c: Bad number of increment to modifier +%c.\n", option, p[0]);
-							n_errors++;
-						}
-					}
+					n_errors += gmt_parse_region_extender (GMT, option, p, &(F->adjust), F->inc);	/* Possibly extend the final region before reporting */
 					break;
 				case 'l':		/* Country list */
 					F->mode = DCW_GET_COUNTRY;

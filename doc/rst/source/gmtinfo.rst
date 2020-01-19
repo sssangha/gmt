@@ -17,7 +17,7 @@ Synopsis
 [ |-D|\ [*dx*\ [/*dy*\ ]] ]
 [ |-E|\ **L**\ \|\ **l**\ \|\ **H**\ \|\ **h**\ [*col*] ]
 [ |-F|\ [**i**\ \|\ **d**\ \|\ **t**\ ] ]
-[ |-I|\ [**b**\ \|\ **e**\ \|\ **f**\ \|\ **p**\ \|\ **s**]\ *dx*\ [/*dy*\ [/*dz*...] ]
+[ |-I|\ [**b**\ \|\ **e**\ \|\ **f**\ \|\ **p**\ \|\ **s**]\ *dx*\ [/*dy*\ [/*dz*...][**+e**\ \|\ **r**\ \|\ **R**\ ] ]
 [ |-L| ]
 [ |-S|\ [**x**\ ][**y**] ]
 [ |-T|\ *dz*\ [\ **+c**\ *col*] ]
@@ -31,6 +31,7 @@ Synopsis
 [ |SYN_OPT-h| ]
 [ |SYN_OPT-i| ]
 [ |SYN_OPT-o| ]
+[ |SYN_OPT-qi| ]
 [ |SYN_OPT-r| ]
 [ |SYN_OPT-s| ]
 [ |SYN_OPT-:| ]
@@ -109,7 +110,7 @@ Optional Arguments
 
 .. _-I:
 
-**-I**\ [**b**\ \|\ **e**\ \|\ **f**\ \|\ **p**\ \|\ **s**]\ *dx*\ [/*dy*\ [/*dz*...]
+**-I**\ [**b**\ \|\ **e**\ \|\ **f**\ \|\ **p**\ \|\ **s**]\ *dx*\ [/*dy*\ [/*dz*...][**+e**\ \|\ **r**\ \|\ **R**\ ]
     Report the min/max of the first *n* columns to the nearest multiple
     of the provided increments (separate the *n* increments by slashes),
     and output results in the form **-R**\ *w/e/s/n* (unless **-C** is
@@ -128,6 +129,11 @@ Optional Arguments
     as a closed polygon segment. Note: for oblique projections you should
     use the **-Ap** option in :doc:`plot` to draw the box properly.
     If **-Ie** is given then the exact min/max of the input is given in the **-R** string.
+    Append **+r** to modify the min/max of the first *n* columns further:
+    Append *inc*, *xinc*/*yinc*, or *winc*/*einc*/*sinc*/*ninc* to adjust the
+    region to be a multiple of these steps [no adjustment]. Alternatively, use **+R** to extend the region
+    outward by adding these increments instead, or **+e** which is like **+r** but
+    it ensures that the bounding box extends by at least 0.25 times the increment [no extension].
 
 .. _-L:
 
@@ -181,6 +187,8 @@ Optional Arguments
 .. include:: explain_-icols.rst_
 
 .. include:: explain_-ocols.rst_
+
+.. include:: explain_-qi.rst_
 
 .. |Add_nodereg| unicode:: 0x20 .. just an invisible code
 .. include:: explain_nodereg.rst_

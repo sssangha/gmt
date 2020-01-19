@@ -49,7 +49,7 @@
 #define THIS_MODULE_PURPOSE	"Grid table data using adjustable tension continuous curvature splines"
 #define THIS_MODULE_KEYS	"<D{,DD(,LG(,GG}"
 #define THIS_MODULE_NEEDS	"R"
-#define THIS_MODULE_OPTIONS "-:RVabdefhirs" GMT_ADD_x_OPT GMT_OPT("FH")
+#define THIS_MODULE_OPTIONS "-:RVabdefhiqrs" GMT_ADD_x_OPT GMT_OPT("FH")
 
 struct SURFACE_CTRL {
 	struct SRF_A {	/* -A<aspect_ratio> */
@@ -62,15 +62,21 @@ struct SURFACE_CTRL {
 		unsigned int mode;	/* 1 if given as fraction */
 		double value;
 	} C;
-	struct SRF_D {	/* -D<line.xyz>[+d] */
+	struct SRF_D {	/* -D<line.xyz>[+d][+z[<zval>]] */
 		bool active;
 		bool debug;
+		bool fix_z;
+		double z;
 		char *file;	/* Name of file with breaklines */
 	} D;
 	struct SRF_G {	/* -G<file> */
 		bool active;
 		char *file;
 	} G;
+	struct SRF_J {	/* -G<file> */
+		bool active;
+		char *projstring;
+	} J;
 	struct SRF_L {	/* -Ll|u<limit> */
 		bool active;
 		char *file[2];
@@ -1408,7 +1414,7 @@ GMT_LOCAL double find_closest_point (double *x, double *y, double *z, uint64_t k
 	return r;
 }
 
-GMT_LOCAL void interpolate_add_breakline (struct GMT_CTRL *GMT, struct SURFACE_INFO *C, struct GMT_DATATABLE *T, char *file) {
+GMT_LOCAL void interpolate_add_breakline (struct GMT_CTRL *GMT, struct SURFACE_INFO *C, struct GMT_DATATABLE *T, char *file, bool fix_z, double z_level) {
 	int srow, scol;
 	uint64_t new_n = 0, n_int = 0, nb = 0;
 	uint64_t k = 0, n, kmax = 0, kmin = 0, row, seg, node_this, node_prev;
@@ -1449,13 +1455,13 @@ GMT_LOCAL void interpolate_add_breakline (struct GMT_CTRL *GMT, struct SURFACE_I
 	for (seg = 0; seg < T->n_segments; seg++) {
 		xline = T->segment[seg]->data[GMT_X];
 		yline = T->segment[seg]->data[GMT_Y];
-		zline = T->segment[seg]->data[GMT_Z];
+		if (!fix_z) zline = T->segment[seg]->data[GMT_Z];
 		/* 1. Interpolate the breakline to ensure there are points in every bin that it crosses */
 		if (file) fprintf (fp1, "> Segment %d\n", (int)seg);
 		for (row = k = 0, new_n = 1; row < T->segment[seg]->n_rows - 1; row++) {
 			dx = xline[row+1] - xline[row];
 			dy = yline[row+1] - yline[row];
-			dz = zline[row+1] - zline[row];
+			if (!fix_z) dz = zline[row+1] - zline[row];
 			/* Given point spacing and grid spacing, how many points to interpolate? */
 			n_int = lrint (hypot (dx, dy) * MAX (C->r_inc[GMT_X], C->r_inc[GMT_Y])) + 1;
 			new_n += n_int;
@@ -1470,11 +1476,11 @@ GMT_LOCAL void interpolate_add_breakline (struct GMT_CTRL *GMT, struct SURFACE_I
 			for (n = 0; n < n_int; k++, n++) {
 				x[k] = xline[row] + n * dx;
 				y[k] = yline[row] + n * dy;
-				z[k] = zline[row] + n * dz;
+				z[k] = (fix_z) ? z_level : zline[row] + n * dz;
 				if (file) fprintf (fp1, "%g\t%g\t%g\n", x[k], y[k], z[k]);
 			}
 		}
-		x[k] = xline[row];	y[k] = yline[row];	z[k] = zline[row];
+		x[k] = xline[row];	y[k] = yline[row];	z[k] = (fix_z) ? z_level : zline[row];
 		if (file) fprintf (fp1, "%g\t%g\t%g\n", x[k], y[k], z[k]);
 	
 		/* 2. Go along the (x,y,z), k = 1:new_n line and find the closest point to each bin node */
@@ -1618,9 +1624,9 @@ GMT_LOCAL int usage (struct GMTAPI_CTRL *API, int level) {
 	if (level == GMT_MODULE_PURPOSE) return (GMT_NOERROR);
 	GMT_Message (API, GMT_TIME_NONE, "usage: %s [<table>] -G<outgrid> %s\n", name, GMT_I_OPT);
 	GMT_Message (API, GMT_TIME_NONE, "\t%s [-A<aspect_ratio>|m] [-C<convergence_limit>]\n", GMT_Rgeo_OPT);
-	GMT_Message (API, GMT_TIME_NONE, "\t[-D<breakline>] [-Ll<limit>] [-Lu<limit>] [-M<radius>[<unit>]] [-N<n_iterations>] [-Q] [-S<search_radius>[m|s]]\n");
-	GMT_Message (API, GMT_TIME_NONE, "\t[-T[i|b]<tension>] [%s] [-W[<logfile>]] [-Z<over_relaxation_parameter>]\n\t[%s] [%s] [%s] [%s]\n\t[%s] [%s]\n\t[%s] [%s]%s[%s] [%s]\n\n",
-		GMT_V_OPT, GMT_bi_OPT, GMT_di_OPT, GMT_e_OPT, GMT_f_OPT, GMT_h_OPT, GMT_i_OPT, GMT_r_OPT, GMT_s_OPT, GMT_x_OPT, GMT_colon_OPT, GMT_PAR_OPT);
+	GMT_Message (API, GMT_TIME_NONE, "\t[-D<breakline>[+z[<zlevel>]]] [%s] [-Ll<limit>] [-Lu<limit>] [-M<radius>[<unit>]] [-N<n_iterations>] [-Q]\n", GMT_J_OPT);
+	GMT_Message (API, GMT_TIME_NONE, "\t[-S<search_radius>[m|s]] [-T[i|b]<tension>] [%s] [-W[<logfile>]] [-Z<over_relaxation_parameter>]\n\t[%s] [%s] [%s] [%s]\n\t[%s] [%s\n\t[%s] [%s] [%s]%s[%s] [%s]\n\n",
+		GMT_V_OPT, GMT_bi_OPT, GMT_di_OPT, GMT_e_OPT, GMT_f_OPT, GMT_h_OPT, GMT_i_OPT, GMT_qi_OPT, GMT_r_OPT, GMT_s_OPT, GMT_x_OPT, GMT_colon_OPT, GMT_PAR_OPT);
 
 	if (level == GMT_SYNOPSIS) return (GMT_MODULE_SYNOPSIS);
 	ppm = urint (SURFACE_CONV_LIMIT / 1e-6);	/* Default convergence criteria */
@@ -1637,6 +1643,9 @@ GMT_LOCAL int usage (struct GMTAPI_CTRL *API, int level) {
 	GMT_Message (API, GMT_TIME_NONE, "\t   Default will choose %g of the rms of your z data after removing L2 plane (%u ppm precision).\n", SURFACE_CONV_LIMIT, ppm);
 	GMT_Message (API, GMT_TIME_NONE, "\t   Enter your own convergence limit in the same units as your z data.\n");
 	GMT_Message (API, GMT_TIME_NONE, "\t-D Use xyz data in the <breakline> file as a 'soft breakline'.\n");
+	GMT_Message (API, GMT_TIME_NONE, "\t   To set a fixed z_level, append modifier +z[<z_level>] which overrides any z from the <breakline> file [0].\n");
+	GMT_Message (API, GMT_TIME_NONE, "\t-J Select the data map projection. This projection is only used to add a CRS info to the\n");
+	GMT_Message (API, GMT_TIME_NONE, "\t   grid formats that support it. E.g. netCDF, GeoTIFF, and others supported by GDAL.\n");
 	GMT_Message (API, GMT_TIME_NONE, "\t-L Constrain the range of output values:\n");
 	GMT_Message (API, GMT_TIME_NONE, "\t   -Ll<limit> specifies lower limit; forces solution to be >= <limit>.\n");
 	GMT_Message (API, GMT_TIME_NONE, "\t   -Lu<limit> specifies upper limit; forces solution to be <= <limit>.\n");
@@ -1669,7 +1678,7 @@ GMT_LOCAL int usage (struct GMTAPI_CTRL *API, int level) {
 	GMT_Message (API, GMT_TIME_NONE, "\t-Z Set <over_relaxation parameter>.  Default = %g.  Use a value\n", SURFACE_OVERRELAXATION);
 	GMT_Message (API, GMT_TIME_NONE, "\t   between 1 and 2.  Larger number accelerates convergence but can be unstable.\n");
 	GMT_Message (API, GMT_TIME_NONE, "\t   Use 1 if you want to be sure to have (slow) stable convergence.\n");
-	GMT_Option (API, "a,bi3,di,e,f,h,i,r,s,x,:,.");
+	GMT_Option (API, "a,bi3,di,e,f,h,i,qi,r,s,x,:,.");
 	if (gmt_M_showusage (API)) GMT_Message (API, GMT_TIME_NONE, "\t   Note: Geographic data with 360-degree range use periodic boundary condition in longitude.\n");
 	GMT_Message (API, GMT_TIME_NONE, "\t(For additional details, see Smith & Wessel, Geophysics, 55, 293-305, 1990.)\n");
 	
@@ -1684,7 +1693,7 @@ GMT_LOCAL int parse (struct GMT_CTRL *GMT, struct SURFACE_CTRL *Ctrl, struct GMT
 	 */
 
 	unsigned int n_errors = 0, k, end;
-	char modifier, *c = NULL;
+	char modifier, *c = NULL, *d = NULL;
 	struct GMT_OPTION *opt = NULL;
 	struct GMTAPI_CTRL *API = GMT->parent;
 
@@ -1713,15 +1722,21 @@ GMT_LOCAL int parse (struct GMT_CTRL *GMT, struct SURFACE_CTRL *Ctrl, struct GMT
 				}
 				break;
 			case 'D':
-				if ((c = strstr (opt->arg, "+d"))) {
-					c[0] = '\0';	/* Temporarily chop off +d part */
+				if ((d = strstr (opt->arg, "+d"))) {
+					d[0] = '\0';	/* Temporarily chop off +d part */
 					Ctrl->D.debug = true;
+				}
+				if ((c = strstr (opt->arg, "+z"))) {
+					c[0] = '\0';	/* Temporarily chop off +z part */
+					if (c[2]) Ctrl->D.z = atof (&c[2]);	/* Get the constant z-value [0] */
+					Ctrl->D.fix_z = true;
 				}
 				if ((Ctrl->D.active = gmt_check_filearg (GMT, 'D', opt->arg, GMT_IN, GMT_IS_DATASET)) != 0)
 					Ctrl->D.file = strdup (opt->arg);
 				else
 					n_errors++;
 				if (c) c[0] = '+';	/* Restore original string */
+				if (d) d[0] = '+';	/* Restore original string */
 				break;
 			case 'G':
 				if ((Ctrl->G.active = gmt_check_filearg (GMT, 'G', opt->arg, GMT_OUT, GMT_IS_GRID)) != 0)
@@ -1731,6 +1746,10 @@ GMT_LOCAL int parse (struct GMT_CTRL *GMT, struct SURFACE_CTRL *Ctrl, struct GMT
 				break;
 			case 'I':
 				n_errors += gmt_parse_inc_option (GMT, 'I', opt->arg);
+				break;
+			case 'J':			/* We have this gal here be cause it needs to be processed separately (after -R) */
+				Ctrl->J.active = true;
+				Ctrl->J.projstring = strdup(opt->arg);
 				break;
 			case 'L':	/* Set limits */
 				Ctrl->L.active = true;
@@ -1862,7 +1881,7 @@ int GMT_surface (void *V_API, int mode, void *args) {
 
 	/* Parse the command-line arguments */
 
-	if ((GMT = gmt_init_module (API, THIS_MODULE_LIB, THIS_MODULE_CLASSIC_NAME, THIS_MODULE_KEYS, THIS_MODULE_NEEDS, &options, &GMT_cpy)) == NULL) bailout (API->error); /* Save current state */
+	if ((GMT = gmt_init_module (API, THIS_MODULE_LIB, THIS_MODULE_CLASSIC_NAME, THIS_MODULE_KEYS, THIS_MODULE_NEEDS, NULL, &options, &GMT_cpy)) == NULL) bailout (API->error); /* Save current state */
 	if (GMT_Parse_Common (API, THIS_MODULE_OPTIONS, options)) Return (API->error);
 	Ctrl = New_Ctrl (GMT);	/* Allocate and initialize a new control structure */
 	if ((error = parse (GMT, Ctrl, options)) != 0) Return (error);
@@ -1933,13 +1952,18 @@ int GMT_surface (void *V_API, int mode, void *args) {
 	if (Ctrl->D.active) {	/* Append breakline dataset */
 		struct GMT_DATASET *Lin = NULL;
 		char *file = (Ctrl->D.debug) ? Ctrl->D.file : NULL;
+		if (Ctrl->D.fix_z) {	/* Either provide a fixed z value or override whatever input file may supply with this value */
+			//GMT->common.b.ncol[GMT_IN] = 0;	/* So Set_Columns will work */
+			if ((error = GMT_Set_Columns (GMT->parent, GMT_IN, 2, GMT_COL_FIX_NO_TEXT)) != GMT_NOERROR)	/* Only read 2 columns */
+				Return (GMT_RUNTIME_ERROR);
+		}
 		if ((Lin = GMT_Read_Data (API, GMT_IS_DATASET, GMT_IS_FILE, GMT_IS_LINE, GMT_READ_NORMAL, NULL, Ctrl->D.file, NULL)) == NULL)
 			Return (API->error);
 		if (Lin->n_columns < 2) {
 			GMT_Report (API, GMT_MSG_NORMAL, "Input file %s has %d column(s) but at least 2 are needed\n", Ctrl->D.file, (int)Lin->n_columns);
 			Return (GMT_DIM_TOO_SMALL);
 		}
-		interpolate_add_breakline (GMT, &C, Lin->table[0], file);	/* Pass the single table since we read a single file */
+		interpolate_add_breakline (GMT, &C, Lin->table[0], file, Ctrl->D.fix_z, Ctrl->D.z);	/* Pass the single table since we read a single file */
 	}
 	
 	throw_away_unusables (GMT, &C);		/* Eliminate data points that will not serve as constraints */
@@ -2105,6 +2129,13 @@ int GMT_surface (void *V_API, int mode, void *args) {
 	}
 	else
 		gmt_M_free (GMT, C.data);
+
+	/* Only gave -J to set the proj4 flag. Do it here only because otherwise would interfere with computations(!!) */
+	if (Ctrl->J.active) {
+		gmt_parse_common_options (GMT, "J", 'J', Ctrl->J.projstring);	/* Has to be processed independently of -R */
+		C.Grid->header->ProjRefPROJ4 = gmt_export2proj4 (GMT);	/* Convert the GMT -J<...> into a proj4 string */;
+		free (Ctrl->J.projstring);
+	}
 	
 	if ((error = write_surface (GMT, &C, Ctrl->G.file)) != 0)	/* Write the output grid */
 		Return (error);

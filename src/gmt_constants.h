@@ -76,6 +76,7 @@
 #define GMT_CONV5_LIMIT	 1.0e-5		/* 10 ppm */
 #define GMT_CONV4_LIMIT	 1.0e-4		/* Less tight convergence limit or "close to zero" limit */
 
+#define GMT_ASCII_ES	27	/* ASCII code for escape (used to prevent +? strings in plain text from being seen as modifiers) */
 #define GMT_ASCII_GS	29	/* ASCII code for group separator (temporarily replacing tabs) */
 #define GMT_ASCII_RS	30	/* ASCII code for record separator (temporarily replacing spaces in filenames) */
 #define GMT_ASCII_US	31	/* ASCII code for unit separator (temporarily replacing spaces in quoted text) */
@@ -122,6 +123,7 @@ enum GMT_enum_length {
 	GMT_LEN256      = 256U,         /* Max size of some text items */
 	GMT_LEN512      = 512U,         /* Max size of other text items */
 	GMT_LEN1024     = 1024U,        /* For file names (antecipating web fnames) */
+	GMT_MAX_RANGES  = 64U,          /* Limit on number of row ranges given in -q */
 	GMT_MAX_COLUMNS = 4096U,        /* Limit on number of columns in data tables (not grids) */
 	GMT_BUFSIZ      = 4096U,        /* Size of char record for i/o */
 	GMT_MSGSIZ      = 16384U,       /* Size of char record for messages and report */
@@ -232,6 +234,9 @@ enum GMT_swap_direction {
 #define GMT_SUBPLOT_ACTIVE	1
 #define GMT_PANEL_NOTSET	2
 
+/* Fraction of increment to force outward region expansion */
+#define GMT_REGION_INCFACTOR 0.25
+
 /*! Codes for grdtrack */
 enum GMT_enum_tracklayout {
 	GMT_LEFT_RIGHT = 1,
@@ -251,6 +256,19 @@ enum GMT_enum_inside {
 	GMT_OUTSIDE = 0,
 	GMT_ONEDGE,
 	GMT_INSIDE};
+
+/*! Codes for -q selections */
+enum GMT_enum_skiprows {
+	GMT_RANGE_ROW_IN   = 1,
+	GMT_RANGE_DATA_IN  = 2,
+	GMT_RANGE_ROW_OUT  = 3,
+	GMT_RANGE_DATA_OUT = 4};
+
+/*! Return codes from parsing region modifiers +r,+R,+e */
+enum GMT_enum_region {
+	GMT_REGION_ADD = 1,
+	GMT_REGION_ROUND,
+	GMT_REGION_ROUND_EXTEND};
 
 /*! Return codes from gmt_get_refpoint */
 enum GMT_enum_refpoint {

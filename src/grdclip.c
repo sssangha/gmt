@@ -173,6 +173,11 @@ GMT_LOCAL int parse (struct GMT_CTRL *GMT, struct GRDCLIP_CTRL *Ctrl, struct GMT
 					}
 					else 
 						Ctrl->S.above = (txt[0] == 'N' || txt[0] == 'n') ? GMT->session.f_NaN : (gmt_grdfloat)atof (txt);
+
+					if (!isnan(Ctrl->S.above) && Ctrl->S.above < Ctrl->S.high) {
+						GMT_Report (API, GMT_MSG_NORMAL, "Syntax error -Sb option: <above> cannot be lesser then <high>\n");
+						n_errors++;
+					}
 					break;
 				case 'b':
 					Ctrl->S.mode |= GRDCLIP_BELOW;
@@ -187,6 +192,11 @@ GMT_LOCAL int parse (struct GMT_CTRL *GMT, struct GRDCLIP_CTRL *Ctrl, struct GMT
 					}
 					else
 						Ctrl->S.below = (txt[0] == 'N' || txt[0] == 'n') ? GMT->session.f_NaN : (gmt_grdfloat)atof (txt);
+
+					if (!isnan(Ctrl->S.below) && Ctrl->S.below > Ctrl->S.low) {
+						GMT_Report (API, GMT_MSG_NORMAL, "Syntax error -Sb option: <below> cannot be greater then <low>\n");
+						n_errors++;
+					}
 					break;
 				case 'i':
 					n_to_expect = 3;	/* Since only two for -Sr */
@@ -209,6 +219,13 @@ GMT_LOCAL int parse (struct GMT_CTRL *GMT, struct GRDCLIP_CTRL *Ctrl, struct GMT
 						}
 						else
 							Ctrl->S.class[n_class].between = (txt[0] == 'N' || txt[0] == 'n') ? GMT->session.f_NaN : (gmt_grdfloat)atof (txt);
+
+						if (!isnan(Ctrl->S.class[n_class].between) &&
+						    !(Ctrl->S.class[n_class].low <= Ctrl->S.class[n_class].between &&
+							  Ctrl->S.class[n_class].high >= Ctrl->S.class[n_class].between)) {
+							GMT_Report (API, GMT_MSG_NORMAL, "Syntax error -Si option: <between> is not between <low> and <high>\n");
+							n_errors++;
+						}
 					}
 					else {
 #ifdef DOUBLE_PRECISION_GRID
@@ -306,7 +323,7 @@ int GMT_grdclip (void *V_API, int mode, void *args) {
 
 	/* Parse the command-line arguments */
 
-	if ((GMT = gmt_init_module (API, THIS_MODULE_LIB, THIS_MODULE_CLASSIC_NAME, THIS_MODULE_KEYS, THIS_MODULE_NEEDS, &options, &GMT_cpy)) == NULL) bailout (API->error); /* Save current state */
+	if ((GMT = gmt_init_module (API, THIS_MODULE_LIB, THIS_MODULE_CLASSIC_NAME, THIS_MODULE_KEYS, THIS_MODULE_NEEDS, NULL, &options, &GMT_cpy)) == NULL) bailout (API->error); /* Save current state */
 	if (GMT_Parse_Common (API, THIS_MODULE_OPTIONS, options)) Return (API->error);
 	Ctrl = New_Ctrl (GMT);	/* Allocate and initialize a new control structure */
 	if ((error = parse (GMT, Ctrl, options)) != 0) Return (error);
