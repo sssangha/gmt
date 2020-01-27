@@ -1705,11 +1705,11 @@ int MGD77_Prep_Header_cdf (struct GMT_CTRL *GMT, struct MGD77_CONTROL *F, struct
 	}
 	if (crossed_dateline && crossed_greenwich)
 		GMT_Report (GMT->parent, GMT_MSG_VERBOSE, "Longitude crossing both Dateline and Greenwich; not adjusted!\n");
-	else if (crossed_dateline) {	/* Cruise is crossing Dateline; switch to 0-360 format for COARDS compliancy */
+	else if (crossed_dateline) {	/* Cruise is crossing Dateline; switch to 0-360 format for COARDS compliance */
 		for (rec = 0; rec < S->H.n_records; rec++)
 			if (values[rec] < 0.0) values[rec] += 360.0;
 	}
-	else if (crossed_greenwich) {	/* Cruise is crossing Greenwich; switch to -180/+180 format for COARDS compliancy */
+	else if (crossed_greenwich) {	/* Cruise is crossing Greenwich; switch to -180/+180 format for COARDS compliance */
 		for (rec = 0; rec < S->H.n_records; rec++)
 			if (values[rec] > 180.0) values[rec] -= 360.0;
 	}
@@ -3526,7 +3526,7 @@ int MGD77_Verify_Header (struct GMT_CTRL *GMT, struct MGD77_CONTROL *F, struct M
 				else	/* 4-digit year given */
 					rfEnd = y;
 				/* IGRF is typically definitive up to the ref field code year (e.g., IGRF-85 is definitive to 1985), then predictive for five years */
-				rfEnd += 5; 
+				rfEnd += 5;
 				rfStart = rfEnd - 5;
 			}
 			else {
@@ -5878,7 +5878,7 @@ int MGD77_Parse_Corrtable (struct GMT_CTRL *GMT, char *tablefile, char **cruises
 				c->modifier = &MGD77_Copy;
 				c->origin = 0.0;
 				c->power = c->scale = 1.0;
-				c->id = -1;	/* Means it is jus a constant factor - no fancy calculations needed */
+				c->id = -1;	/* Means it is just a constant factor - no fancy calculations needed */
 			}
 			else {	/* factor*basis */
 				sscanf (word, "%[^*]*%s", factor, basis);
