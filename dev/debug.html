@@ -226,7 +226,7 @@ part of Xcode you must have installed the full Xcode (you most likely did, but t
 ways to <em>only</em> install the command-line tools, so make sure you have an Xcode icon under
 Applications).  Xcode may change as versions change; the images below is for Xcode 10-11.</p>
 <ol class="arabic">
-<li><p class="first">You will need to make some changes to your <em>cmake/ConfigUser.cmake</em> file. Scroll down to the
+<li><p class="first">You will need to make some changes to your <em>cmake/ConfigUserAdvanced.cmake</em> file. Scroll down to the
 section that says “# Extra debugging for developers:” and uncomment the ~6 lines that has
 the if-test on “Xcode”.  This will pass a few flags that are used when debugging via Xcode.
 Also uncomment the two “add_definitions” lines that contain the word “DEBUG” in it somewhere.</p>
@@ -343,7 +343,7 @@ advance to the next stop point, examine variables, and so on.</p>
         
         &copy; Copyright 2020, The GMT Team.
       <span class="lastupdated">
-        Last updated on Feb 07, 2020.
+        Last updated on Feb 10, 2020.
       </span>
 
     </p>
